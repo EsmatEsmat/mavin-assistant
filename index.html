@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+    <meta charset="UTF-8">
+    <title>MAVIN معاوِن</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @font-face {
+            font-family: 'Jameel Noori Nastaleeq';
+            src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff');
+        }
+        body { font-family: 'Jameel Noori Nastaleeq', serif; background: linear-gradient(135deg, #87CEEB, #50C878); min-height: 100vh; }
+        .chat-bubble { max-width: 80%; padding: 12px 20px; border-radius: 20px; margin: 8px 0; }
+        .user-msg { background-color: #ffffff; color: #0f172a; align-self: flex-end; border-top-right-radius: 0; }
+        .bot-msg { background-color: #064e3b; color: #ffffff; align-self: flex-start; border-top-left-radius: 0; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+    <header class="bg-emerald-600 text-white p-6 text-center font-bold text-2xl shadow-xl">
+        MAVIN معاوِن
+    </header>
+
+    <div id="chatbox" class="flex-1 overflow-y-auto p-6 flex flex-col items-start gap-4">
+        <div class="bot-msg chat-bubble">Adaab! I am MAVIN معاوِن. How can I help you?</div>
+    </div>
+
+    <div class="p-6 bg-sky-600 border-t flex gap-2">
+        <input id="userInput" onkeypress="handleKeyPress(event)" class="flex-1 p-4 rounded-full focus:outline-none" placeholder="Type here / یہاں لکھیں...">
+        <button onclick="sendMessage()" class="bg-emerald-500 text-white px-8 py-2 rounded-full font-bold hover:bg-emerald-400">Send</button>
+    </div>
+
+    <script>
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const chatbox = document.getElementById('chatbox');
+            if (!input.value.trim()) return;
+
+            chatbox.innerHTML += `<div class="user-msg chat-bubble" style="align-self: flex-end">${input.value}</div>`;
+            const query = input.value;
+            input.value = '';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: query})
+                });
+                const data = await response.json();
+                chatbox.innerHTML += `<div class="bot-msg chat-bubble">${data.response}</div>`;
+            } catch (e) {
+                chatbox.innerHTML += `<div class="bot-msg chat-bubble">Error: Could not connect to server.</div>`;
+            }
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
