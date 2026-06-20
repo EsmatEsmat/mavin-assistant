@@ -22,8 +22,19 @@ app.add_middleware(
 # Load Data and Model with 'latin1' encoding to handle special characters
 faq = pd.read_csv("master_faq.csv", encoding='latin1')
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
-# Using the exact header names from your screenshot
+# At the top
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        model = SentenceTransformer('model-name') # Only loads when first needed
+    return model
+
+@app.post("/chat")
+async def chat(data: Request):
+    m = get_model() # Loads only when someone actually chats
+    # Using the exact header names from your screenshot
 faq_embs = model.encode(faq["Main Question"].tolist(), convert_to_tensor=True)
 
 class QueryRequest(BaseModel):
