@@ -19,23 +19,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Data and Model with 'latin1' encoding to handle special characters
-faq = pd.read_csv("master_faq.csv", encoding='latin1')
+# Global variables for lazy loading
+_model = None
+_faq = None
+_faq_embs = None
 
-# At the top
-model = None
-
-def get_model():
-    global model
-    if model is None:
-        model = SentenceTransformer('model-name') # Only loads when first needed
-    return model
-
-@app.post("/chat")
-async def chat(data: Request):
-    m = get_model() # Loads only when someone actually chats
-    # Using the exact header names from your screenshot
-faq_embs = model.encode(faq["Main Question"].tolist(), convert_to_tensor=True)
+def get_resources():
+    global _model, _faq, _faq_embs
+    if _model is None:
+        # Load resources only when the first request arrives
+        _model = SentenceTransformer('all-MiniLM-L6-v2')
+        _faq = pd.read_csv("master_faq.csv", encoding='latin1')
+        _faq_embs = _model.encode(_faq["Main Question"].tolist(), convert_to_tensor=True)
+    return _model, _faq, _faq_embs
 
 class QueryRequest(BaseModel):
     message: str
@@ -46,6 +42,9 @@ def is_urdu(text):
 @app.post("/chat")
 async def chat(request: QueryRequest):
     try:
+        # Trigger lazy load
+        model, faq, faq_embs = get_resources()
+        
         prompt = request.message
         urdu = is_urdu(prompt)
         logging.info(f"Query: {prompt}")
@@ -64,7 +63,6 @@ async def chat(request: QueryRequest):
             val, idx = util.cos_sim(model.encode(q, convert_to_tensor=True), faq_embs).max(dim=1)
             
             if val > 0.4:
-                # Using the exact "Answer" header from your screenshot
                 ans = faq.iloc[int(idx)]["Answer"]
                 if urdu: ans = GoogleTranslator(source='en', target='ur').translate(ans)
             else:
